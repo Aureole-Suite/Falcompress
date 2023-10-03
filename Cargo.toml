@@ -4,6 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-gospel = { version = "0.1.0", features = ["dump"] }
+gospel = "0.1.0"
 bitmatch = "0.1.1"
 thiserror = "1.0.38"

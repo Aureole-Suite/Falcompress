@@ -49,24 +49,26 @@ pub fn decompress_ed7(f: &mut Reader) -> Result<Vec<u8>, Error> {
 	let usize = f.u32()? as usize;
 	let nchunks = f.u32()?;
 	let mut out = Vec::with_capacity(usize);
-	let mut lastchunk = 0;
-	for _ in 1..nchunks {
+	for n in 0..nchunks {
 		let Some(chunklen) = (f.u16()? as usize).checked_sub(2) else {
 			return Err(Error::Frame)
 		};
-		lastchunk = out.len();
 		decompress_chunk(f.slice(chunklen)?, &mut out)?;
-		f.check_u8(1)?;
+		// Falcom's tools always have 0/1 here, but some other tool — might even be one of mine — writes other values.
+		if (f.u8()? != 0) != (n != nchunks - 1) {
+			return Err(Error::Frame)
+		}
 	}
 
-	let Some(chunklen) = (f.u16()? as usize).checked_sub(2) else {
-		return Err(Error::Frame)
-	};
-	let mut dummy = Vec::new();
-	decompress_chunk(f.slice(chunklen)?, &mut dummy)?;
-	f.check_u8(0)?;
-
-	assert_eq!(&[out[lastchunk]], dummy.as_slice());
+	// Falcom's tools always write a chunk of one extra byte. Other tools might not.
+	if out.len() != usize {
+		if out.len() != usize + 1 {
+			return Err(Error::Frame)
+		}
+		if out.pop().unwrap() != out[out.len() / 0x7FF0 * 0x7FF0] {
+			return Err(Error::Frame)
+		}
+	}
 
 	if csize != f.pos() - start {
 		return Err(Error::Frame)

@@ -45,16 +45,9 @@ version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d1c135ec4141d6fdc9fa4fb9d9b146c8f30a979f70c95c543d1551e2542572a9"
 dependencies = [
- "gospel-dump",
  "paste",
  "thiserror",
 ]
-
-[[package]]
-name = "gospel-dump"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a74e0caaa6007818c88f24a5d5fc373ab9c6398fe97749451ed14af02f7bf29"
 
 [[package]]
 name = "itertools"
