@@ -67,22 +67,16 @@ pub fn decompress_ed7(f: &mut Reader) -> Result<Vec<u8>> {
 	// Falcom's tools always write a chunk of one extra byte. Other tools might not.
 	// One notable exception is ao-psp's cti03200, which has *two* such bytes
 	while out.len() > usize {
-		if chunk_lengths.pop() == Some(1) {
-			if out.pop().unwrap() != out[out.len() / 0x7FF0 * 0x7FF0] {
-				return Err(Error::Frame)
-			}
-		} else {
+		if chunk_lengths.pop() != Some(1) {
+			return Err(Error::Frame)
+		}
+		if out.pop().unwrap() != out[out.len() / 0x7FF0 * 0x7FF0] {
 			return Err(Error::Frame)
 		}
 	}
 
-	if csize != f.pos() - start {
-		return Err(Error::Frame)
-	}
-	if usize != out.len() {
-		return Err(Error::Frame)
-	}
-
+	Error::check_size(csize, f.pos() - start)?;
+	Error::check_size(usize, out.len())?;
 	Ok(out)
 }
 

@@ -1,4 +1,6 @@
 pub mod bzip;
+pub mod c77;
+
 pub mod util;
 
 #[derive(Debug, thiserror::Error)]
@@ -13,6 +15,16 @@ pub enum Error {
 	},
 	#[error("invalid frame")]
 	Frame,
+}
+
+impl Error {
+	fn check_size(expected: usize, actual: usize) -> Result<()> {
+		if expected == actual {
+			Ok(())
+		} else {
+			Err(Error::Frame)
+		}
+	}
 }
 
 pub type Result<A, E=Error> = std::result::Result<A, E>;
