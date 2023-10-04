@@ -23,46 +23,14 @@ pub fn count_equal(a: &[u8], b: &[u8], limit: usize) -> usize {
 		.count() + i
 }
 
-pub trait Output {
-	fn constant(&mut self, count: usize, value: u8);
-	fn verbatim(&mut self, s: &[u8]);
-	fn repeat(&mut self, count: usize, offset: usize) -> Result<()>;
-}
-
-impl<'a> Output for &'a mut Vec<u8> {
-	fn constant(&mut self, count: usize, value: u8) {
+impl<'a> OffsetVec<'a, u8> {
+	pub(crate) fn decomp_constant(&mut self, count: usize, value: u8) {
 		for _ in 0..count {
 			self.push(value);
 		}
 	}
 
-	fn verbatim(&mut self, s: &[u8]) {
-		self.extend_from_slice(s)
-	}
-
-	fn repeat(&mut self, count: usize, offset: usize) -> Result<()> {
-		if !(1..=self.len()).contains(&offset) {
-			return Err(Error::BadRepeat { count, offset, len: self.len() })
-		}
-		for _ in 0..count {
-			self.push(self[self.len()-offset]);
-		}
-		Ok(())
-	}
-}
-
-impl<'a> Output for OffsetVec<'a, u8> {
-	fn constant(&mut self, count: usize, value: u8) {
-		for _ in 0..count {
-			self.push(value);
-		}
-	}
-
-	fn verbatim(&mut self, s: &[u8]) {
-		self.extend_from_slice(s)
-	}
-
-	fn repeat(&mut self, count: usize, offset: usize) -> Result<()> {
+	pub(crate) fn decomp_repeat(&mut self, count: usize, offset: usize) -> Result<()> {
 		if !(1..=self.len()).contains(&offset) {
 			return Err(Error::BadRepeat { count, offset, len: self.len() })
 		}

@@ -2,7 +2,6 @@ use gospel::read::{Reader, Le};
 
 use crate::offset_vec::OffsetVec;
 use crate::{Result, Error};
-use crate::util::Output;
 
 struct Bits {
 	bits: u16,
@@ -57,7 +56,7 @@ impl Bits {
 	}
 }
 
-fn decompress_mode2(data: &[u8], w: &mut impl Output) -> Result<(), Error> {
+fn decompress_mode2(data: &[u8], w: &mut OffsetVec<u8>) -> Result<(), Error> {
 	let f = &mut Reader::new(data);
 	let mut b = Bits::new();
 	b.renew_bits(f)?;
@@ -65,11 +64,11 @@ fn decompress_mode2(data: &[u8], w: &mut impl Output) -> Result<(), Error> {
 
 	loop {
 		if !b.bit(f)? {
-			w.verbatim(f.slice(1)?)
+			w.extend(f.slice(1)?)
 		} else if !b.bit(f)? {
 			let o = b.bits(8, f)?;
 			let n = b.read_count(f)?;
-			w.repeat(n, o)?
+			w.decomp_repeat(n, o)?
 		} else {
 			match b.bits(13, f)? {
 				0 => break,
@@ -79,11 +78,11 @@ fn decompress_mode2(data: &[u8], w: &mut impl Output) -> Result<(), Error> {
 					} else {
 						b.bits(4, f)?
 					};
-					w.constant(14 + n, f.u8()?);
+					w.decomp_constant(14 + n, f.u8()?);
 				}
 				o => {
 					let n = b.read_count(f)?;
-					w.repeat(n, o)?;
+					w.decomp_repeat(n, o)?;
 				}
 			}
 		}
@@ -92,7 +91,7 @@ fn decompress_mode2(data: &[u8], w: &mut impl Output) -> Result<(), Error> {
 }
 
 #[bitmatch::bitmatch]
-fn decompress_mode1(data: &[u8], w: &mut impl Output) -> Result<(), Error> {
+fn decompress_mode1(data: &[u8], w: &mut OffsetVec<u8>) -> Result<(), Error> {
 	let f = &mut Reader::new(data);
 
 	let mut last_o = 0;
@@ -100,18 +99,18 @@ fn decompress_mode1(data: &[u8], w: &mut impl Output) -> Result<(), Error> {
 		#[bitmatch] match f.u8()? as usize {
 			"00xnnnnn" => {
 				let n = if x == 1 { n << 8 | f.u8()? as usize } else { n };
-				w.verbatim(f.slice(n)?);
+				w.extend(f.slice(n)?);
 			}
 			"010xnnnn" => {
 				let n = if x == 1 { n << 8 | f.u8()? as usize } else { n };
-				w.constant(4 + n, f.u8()?);
+				w.decomp_constant(4 + n, f.u8()?);
 			}
 			"011nnnnn" => {
-				w.repeat(n, last_o)?;
+				w.decomp_repeat(n, last_o)?;
 			}
 			"1nnooooo" => {
 				last_o = o << 8 | f.u8()? as usize;
-				w.repeat(4 + n, last_o)?;
+				w.decomp_repeat(4 + n, last_o)?;
 			},
 		}
 	}
