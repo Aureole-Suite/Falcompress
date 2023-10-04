@@ -9,16 +9,15 @@ pub fn decompress(f: &mut Reader, out: &mut Vec<u8>) -> Result<()> {
 	let data = f.slice(csize)?;
 
 	let start = out.len();
-	decompress_inner(data, out.into())?;
+	decompress_inner(&mut Reader::new(data), out.into())?;
 	Error::check_size(usize, out.len() - start)?;
 	Ok(())
 }
 
-fn decompress_inner(data: &[u8], mut out: OutBuf) -> Result<()> {
-	let f = &mut Reader::new(data);
+fn decompress_inner(f: &mut Reader, mut out: OutBuf) -> Result<()> {
 	let mode = f.u32()?;
 	if mode == 0 {
-		out.extend(&data[4..]);
+		out.extend(f.remaining());
 	} else {
 		while !f.is_empty() {
 			let x = f.u16()? as usize;
