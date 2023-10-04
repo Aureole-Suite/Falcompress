@@ -3,7 +3,7 @@
 // but this one gives identical results to Falcom's,
 // which I value higher than saving a few bytes.
 
-use super::count_equal;
+use crate::util::count_equal;
 
 pub fn compress(input: &[u8], out: &mut Vec<u8>) {
 	assert!(input.len() < 0xFFFF);

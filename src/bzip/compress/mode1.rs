@@ -4,7 +4,7 @@
 
 use std::collections::{HashMap, VecDeque};
 
-use super::count_equal;
+use crate::util::count_equal;
 
 pub fn compress(input: &[u8], out: &mut Vec<u8>) {
 	let mut input_pos = 0;
