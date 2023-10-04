@@ -1,65 +1,7 @@
 use gospel::read::{Reader, Le};
 
 use crate::{Result, Error};
-
-trait Output {
-	fn constant(&mut self, n: usize, b: u8);
-	fn verbatim(&mut self, s: &[u8]);
-	fn repeat(&mut self, n: usize, o: usize) -> Result<()>;
-}
-
-struct OutBuf<'a> {
-	start: usize,
-	out: &'a mut Vec<u8>,
-}
-
-impl<'a> OutBuf<'a> {
-	fn new(out: &'a mut Vec<u8>) -> Self {
-		OutBuf {
-			start: out.len(),
-			out,
-		}
-	}
-}
-
-impl Output for OutBuf<'_> {
-	fn constant(&mut self, n: usize, b: u8) {
-		for _ in 0..n {
-			self.out.push(b);
-		}
-	}
-
-	fn verbatim(&mut self, s: &[u8]) {
-		self.out.extend_from_slice(s)
-	}
-
-	fn repeat(&mut self, n: usize, o: usize) -> Result<()> {
-		if !(1..=self.out.len()-self.start).contains(&o) {
-			return Err(Error::BadRepeat { count: n, offset: o, len: self.out.len() })
-		}
-		for _ in 0..n {
-			self.out.push(self.out[self.out.len()-o]);
-		}
-		Ok(())
-	}
-}
-
-struct CountSize(usize);
-
-impl Output for CountSize {
-	fn constant(&mut self, n: usize, _: u8) {
-		self.0 += n;
-	}
-
-	fn verbatim(&mut self, s: &[u8]) {
-		self.0 += s.len();
-	}
-
-	fn repeat(&mut self, n: usize, _: usize) -> Result<()> {
-		self.0 += n;
-		Ok(())
-	}
-}
+use crate::util::{Output, OutBuf, CountSize};
 
 struct Bits {
 	bits: u16,

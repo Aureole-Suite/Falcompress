@@ -1,5 +1,7 @@
 use std::iter::zip;
 
+use crate::{Result, Error};
+
 pub fn count_equal(a: &[u8], b: &[u8], limit: usize) -> usize {
 	let n = limit.min(a.len()).min(b.len());
 	const N: usize = 8;
@@ -19,4 +21,63 @@ pub fn count_equal(a: &[u8], b: &[u8], limit: usize) -> usize {
 	zip(&a[i..n], &b[i..n])
 		.take_while(|(a, b)| a == b)
 		.count() + i
+}
+
+pub trait Output {
+	fn constant(&mut self, n: usize, b: u8);
+	fn verbatim(&mut self, s: &[u8]);
+	fn repeat(&mut self, n: usize, o: usize) -> Result<()>;
+}
+
+pub struct OutBuf<'a> {
+	start: usize,
+	out: &'a mut Vec<u8>,
+}
+
+impl<'a> OutBuf<'a> {
+	pub fn new(out: &'a mut Vec<u8>) -> Self {
+		OutBuf {
+			start: out.len(),
+			out,
+		}
+	}
+}
+
+impl Output for OutBuf<'_> {
+	fn constant(&mut self, n: usize, b: u8) {
+		for _ in 0..n {
+			self.out.push(b);
+		}
+	}
+
+	fn verbatim(&mut self, s: &[u8]) {
+		self.out.extend_from_slice(s)
+	}
+
+	fn repeat(&mut self, n: usize, o: usize) -> Result<()> {
+		if !(1..=self.out.len()-self.start).contains(&o) {
+			return Err(Error::BadRepeat { count: n, offset: o, len: self.out.len() })
+		}
+		for _ in 0..n {
+			self.out.push(self.out[self.out.len()-o]);
+		}
+		Ok(())
+	}
+}
+
+pub struct CountSize(pub usize);
+
+impl Output for CountSize {
+	fn constant(&mut self, n: usize, _: u8) {
+		self.0 += n;
+	}
+
+	fn verbatim(&mut self, s: &[u8]) {
+		self.0 += s.len();
+	}
+
+	fn repeat(&mut self, n: usize, _: usize) -> Result<()> {
+		self.0 += n;
+		Ok(())
+	}
 }
