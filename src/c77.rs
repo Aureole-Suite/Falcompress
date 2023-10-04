@@ -1,6 +1,6 @@
 use gospel::read::{Reader, Le as _};
 
-use crate::offset_vec::OffsetVec;
+use crate::util::OutBuf;
 use crate::{Result, Error};
 
 pub fn decompress(f: &mut Reader, out: &mut Vec<u8>) -> Result<()> {
@@ -9,12 +9,12 @@ pub fn decompress(f: &mut Reader, out: &mut Vec<u8>) -> Result<()> {
 	let data = f.slice(csize)?;
 
 	let start = out.len();
-	decompress_inner(data, &mut OffsetVec::new(out))?;
+	decompress_inner(data, out.into())?;
 	Error::check_size(usize, out.len() - start)?;
 	Ok(())
 }
 
-fn decompress_inner(data: &[u8], out: &mut OffsetVec<u8>) -> Result<()> {
+fn decompress_inner(data: &[u8], mut out: OutBuf) -> Result<()> {
 	let f = &mut Reader::new(data);
 	let mode = f.u32()?;
 	if mode == 0 {

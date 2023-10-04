@@ -1,6 +1,6 @@
 use gospel::read::{Reader, Le};
 
-use crate::offset_vec::OffsetVec;
+use crate::util::OutBuf;
 use crate::{Result, Error};
 
 struct Bits {
@@ -56,7 +56,7 @@ impl Bits {
 	}
 }
 
-fn decompress_mode2(data: &[u8], w: &mut OffsetVec<u8>) -> Result<(), Error> {
+fn decompress_mode2(data: &[u8], mut w: OutBuf) -> Result<(), Error> {
 	let f = &mut Reader::new(data);
 	let mut b = Bits::new();
 	b.renew_bits(f)?;
@@ -91,7 +91,7 @@ fn decompress_mode2(data: &[u8], w: &mut OffsetVec<u8>) -> Result<(), Error> {
 }
 
 #[bitmatch::bitmatch]
-fn decompress_mode1(data: &[u8], w: &mut OffsetVec<u8>) -> Result<(), Error> {
+fn decompress_mode1(data: &[u8], mut w: OutBuf) -> Result<(), Error> {
 	let f = &mut Reader::new(data);
 
 	let mut last_o = 0;
@@ -118,10 +118,9 @@ fn decompress_mode1(data: &[u8], w: &mut OffsetVec<u8>) -> Result<(), Error> {
 }
 
 pub fn decompress(data: &[u8], w: &mut Vec<u8>) -> Result<()> {
-	let w = &mut OffsetVec::new(w);
 	if data.first() == Some(&0) {
-		decompress_mode2(data, w)
+		decompress_mode2(data, w.into())
 	} else {
-		decompress_mode1(data, w)
+		decompress_mode1(data, w.into())
 	}
 }
