@@ -47,13 +47,17 @@ pub fn decompress_ed7(f: &mut Reader) -> Result<Vec<u8>, Error> {
 	let csize = f.u32()? as usize;
 	let start = f.pos();
 	let usize = f.u32()? as usize;
-	let nchunks = f.u32()?;
+	let nchunks = f.u32()? as usize;
 	let mut out = Vec::with_capacity(usize);
+	let mut chunk_lengths = Vec::with_capacity(nchunks);
 	for n in 0..nchunks {
 		let Some(chunklen) = (f.u16()? as usize).checked_sub(2) else {
 			return Err(Error::Frame)
 		};
+		let start = out.len();
 		decompress_chunk(f.slice(chunklen)?, &mut out)?;
+		chunk_lengths.push(out.len() - start);
+
 		// Falcom's tools always have 0/1 here, but some other tool — might even be one of mine — writes other values.
 		if (f.u8()? != 0) != (n != nchunks - 1) {
 			return Err(Error::Frame)
@@ -61,11 +65,13 @@ pub fn decompress_ed7(f: &mut Reader) -> Result<Vec<u8>, Error> {
 	}
 
 	// Falcom's tools always write a chunk of one extra byte. Other tools might not.
-	if out.len() != usize {
-		if out.len() != usize + 1 {
-			return Err(Error::Frame)
-		}
-		if out.pop().unwrap() != out[out.len() / 0x7FF0 * 0x7FF0] {
+	// One notable exception is ao-psp's cti03200, which has *two* such bytes
+	while out.len() > usize {
+		if chunk_lengths.pop() == Some(1) {
+			if out.pop().unwrap() != out[out.len() / 0x7FF0 * 0x7FF0] {
+				return Err(Error::Frame)
+			}
+		} else {
 			return Err(Error::Frame)
 		}
 	}
