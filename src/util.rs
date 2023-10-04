@@ -24,9 +24,9 @@ pub fn count_equal(a: &[u8], b: &[u8], limit: usize) -> usize {
 }
 
 pub trait Output {
-	fn constant(&mut self, n: usize, b: u8);
+	fn constant(&mut self, count: usize, value: u8);
 	fn verbatim(&mut self, s: &[u8]);
-	fn repeat(&mut self, n: usize, o: usize) -> Result<()>;
+	fn repeat(&mut self, count: usize, offset: usize) -> Result<()>;
 }
 
 pub struct OutBuf<'a> {
@@ -44,9 +44,9 @@ impl<'a> OutBuf<'a> {
 }
 
 impl Output for OutBuf<'_> {
-	fn constant(&mut self, n: usize, b: u8) {
-		for _ in 0..n {
-			self.out.push(b);
+	fn constant(&mut self, count: usize, value: u8) {
+		for _ in 0..count {
+			self.out.push(value);
 		}
 	}
 
@@ -54,12 +54,12 @@ impl Output for OutBuf<'_> {
 		self.out.extend_from_slice(s)
 	}
 
-	fn repeat(&mut self, n: usize, o: usize) -> Result<()> {
-		if !(1..=self.out.len()-self.start).contains(&o) {
-			return Err(Error::BadRepeat { count: n, offset: o, len: self.out.len() })
+	fn repeat(&mut self, count: usize, offset: usize) -> Result<()> {
+		if !(1..=self.out.len()-self.start).contains(&offset) {
+			return Err(Error::BadRepeat { count, offset, len: self.out.len() })
 		}
-		for _ in 0..n {
-			self.out.push(self.out[self.out.len()-o]);
+		for _ in 0..count {
+			self.out.push(self.out[self.out.len()-offset]);
 		}
 		Ok(())
 	}
@@ -68,16 +68,16 @@ impl Output for OutBuf<'_> {
 pub struct CountSize(pub usize);
 
 impl Output for CountSize {
-	fn constant(&mut self, n: usize, _: u8) {
-		self.0 += n;
+	fn constant(&mut self, count: usize, _: u8) {
+		self.0 += count;
 	}
 
 	fn verbatim(&mut self, s: &[u8]) {
 		self.0 += s.len();
 	}
 
-	fn repeat(&mut self, n: usize, _: usize) -> Result<()> {
-		self.0 += n;
+	fn repeat(&mut self, count: usize, _: usize) -> Result<()> {
+		self.0 += count;
 		Ok(())
 	}
 }
