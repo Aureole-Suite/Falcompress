@@ -5,6 +5,7 @@ pub mod c77;
 pub mod freadp;
 
 pub mod util;
+pub mod offset_vec;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {

@@ -1,6 +1,6 @@
 use std::iter::zip;
 
-use crate::{Result, Error};
+use crate::{Result, Error, offset_vec::OffsetVec};
 
 pub fn count_equal(a: &[u8], b: &[u8], limit: usize) -> usize {
 	let n = limit.min(a.len()).min(b.len());
@@ -29,37 +29,45 @@ pub trait Output {
 	fn repeat(&mut self, count: usize, offset: usize) -> Result<()>;
 }
 
-pub struct OutBuf<'a> {
-	start: usize,
-	out: &'a mut Vec<u8>,
-}
-
-impl<'a> OutBuf<'a> {
-	pub fn new(out: &'a mut Vec<u8>) -> Self {
-		OutBuf {
-			start: out.len(),
-			out,
-		}
-	}
-}
-
-impl Output for OutBuf<'_> {
+impl<'a> Output for &'a mut Vec<u8> {
 	fn constant(&mut self, count: usize, value: u8) {
 		for _ in 0..count {
-			self.out.push(value);
+			self.push(value);
 		}
 	}
 
 	fn verbatim(&mut self, s: &[u8]) {
-		self.out.extend_from_slice(s)
+		self.extend_from_slice(s)
 	}
 
 	fn repeat(&mut self, count: usize, offset: usize) -> Result<()> {
-		if !(1..=self.out.len()-self.start).contains(&offset) {
-			return Err(Error::BadRepeat { count, offset, len: self.out.len() })
+		if !(1..=self.len()).contains(&offset) {
+			return Err(Error::BadRepeat { count, offset, len: self.len() })
 		}
 		for _ in 0..count {
-			self.out.push(self.out[self.out.len()-offset]);
+			self.push(self[self.len()-offset]);
+		}
+		Ok(())
+	}
+}
+
+impl<'a> Output for OffsetVec<'a, u8> {
+	fn constant(&mut self, count: usize, value: u8) {
+		for _ in 0..count {
+			self.push(value);
+		}
+	}
+
+	fn verbatim(&mut self, s: &[u8]) {
+		self.extend_from_slice(s)
+	}
+
+	fn repeat(&mut self, count: usize, offset: usize) -> Result<()> {
+		if !(1..=self.len()).contains(&offset) {
+			return Err(Error::BadRepeat { count, offset, len: self.len() })
+		}
+		for _ in 0..count {
+			self.push(self[self.len()-offset]);
 		}
 		Ok(())
 	}
