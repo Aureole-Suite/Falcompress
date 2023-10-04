@@ -6,18 +6,19 @@ use crate::{Result, Error};
 pub fn decompress(f: &mut Reader, out: &mut Vec<u8>) -> Result<()> {
 	let csize = f.u32()? as usize;
 	let usize = f.u32()? as usize;
-	let data = f.slice(csize)?;
+	let f = &mut Reader::new(f.slice(csize)?);
 
 	let start = out.len();
-	decompress_inner(&mut Reader::new(data), out.into())?;
+	decompress_inner(f, out.into())?;
 	Error::check_size(usize, out.len() - start)?;
+	Error::check_end(f)?;
 	Ok(())
 }
 
 fn decompress_inner(f: &mut Reader, mut out: OutBuf) -> Result<()> {
 	let mode = f.u32()?;
 	if mode == 0 {
-		out.extend(f.remaining());
+		out.extend(f.slice(f.remaining().len())?);
 	} else {
 		while !f.is_empty() {
 			let x = f.u16()? as usize;

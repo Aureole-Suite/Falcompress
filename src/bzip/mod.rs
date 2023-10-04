@@ -45,7 +45,7 @@ pub fn decompress_ed6(f: &mut Reader) -> Result<Vec<u8>> {
 
 pub fn decompress_ed7(f: &mut Reader) -> Result<Vec<u8>> {
 	let csize = f.u32()? as usize;
-	let start = f.pos();
+	let f = &mut Reader::new(f.slice(csize)?);
 	let usize = f.u32()? as usize;
 	let nchunks = f.u32()? as usize;
 	let mut out = Vec::with_capacity(usize);
@@ -75,8 +75,8 @@ pub fn decompress_ed7(f: &mut Reader) -> Result<Vec<u8>> {
 		}
 	}
 
-	Error::check_size(csize, f.pos() - start)?;
 	Error::check_size(usize, out.len())?;
+	Error::check_end(f)?;
 	Ok(out)
 }
 
