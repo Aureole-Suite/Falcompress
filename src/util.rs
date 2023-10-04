@@ -72,20 +72,3 @@ impl<'a> Output for OffsetVec<'a, u8> {
 		Ok(())
 	}
 }
-
-pub struct CountSize(pub usize);
-
-impl Output for CountSize {
-	fn constant(&mut self, count: usize, _: u8) {
-		self.0 += count;
-	}
-
-	fn verbatim(&mut self, s: &[u8]) {
-		self.0 += s.len();
-	}
-
-	fn repeat(&mut self, count: usize, _: usize) -> Result<()> {
-		self.0 += count;
-		Ok(())
-	}
-}

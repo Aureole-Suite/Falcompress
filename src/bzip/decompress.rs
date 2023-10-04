@@ -2,7 +2,7 @@ use gospel::read::{Reader, Le};
 
 use crate::offset_vec::OffsetVec;
 use crate::{Result, Error};
-use crate::util::{Output, CountSize};
+use crate::util::Output;
 
 struct Bits {
 	bits: u16,
@@ -125,14 +125,4 @@ pub fn decompress(data: &[u8], w: &mut Vec<u8>) -> Result<()> {
 	} else {
 		decompress_mode1(data, w)
 	}
-}
-
-pub fn get_size(data: &[u8]) -> Option<usize> {
-	let w = &mut CountSize(0);
-	if data.first() == Some(&0) {
-		decompress_mode2(data, w).ok()?;
-	} else {
-		decompress_mode1(data, w).ok()?;
-	}
-	Some(w.0)
 }

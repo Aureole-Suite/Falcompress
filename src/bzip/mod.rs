@@ -106,7 +106,9 @@ pub fn compression_info_ed6(data: &[u8]) -> Option<(usize, Option<CompressMode>)
 			if !f.remaining().is_empty() {
 				return None
 			}
-			len += decompress::get_size(chunk)?;
+			let mut vec = Vec::new();
+			decompress::decompress(chunk, &mut vec).ok()?;
+			len += vec.len();
 			break
 		} else {
 			len += 0xFFF0;
