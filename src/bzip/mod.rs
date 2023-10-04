@@ -21,7 +21,7 @@ use gospel::write::{Writer, Le as _, Label};
 mod decompress;
 mod compress;
 
-pub use decompress::Error;
+use crate::{Result, Error};
 
 /// Decompresses a single chunk of compressed data. Both mode 1 and 2 are supported.
 /// There are no notable limitations regarding input or output size.
@@ -29,7 +29,7 @@ pub use decompress::Error;
 /// In most cases you will likely want to use the framed formats instead, [`decompress_ed6`] or [`decompress_ed7`].
 pub use decompress::decompress as decompress_chunk;
 
-pub fn decompress_ed6(f: &mut Reader) -> Result<Vec<u8>, Error> {
+pub fn decompress_ed6(f: &mut Reader) -> Result<Vec<u8>> {
 	let mut out = Vec::new();
 	loop {
 		let Some(chunklen) = (f.u16()? as usize).checked_sub(2) else {
@@ -43,7 +43,7 @@ pub fn decompress_ed6(f: &mut Reader) -> Result<Vec<u8>, Error> {
 	Ok(out)
 }
 
-pub fn decompress_ed7(f: &mut Reader) -> Result<Vec<u8>, Error> {
+pub fn decompress_ed7(f: &mut Reader) -> Result<Vec<u8>> {
 	let csize = f.u32()? as usize;
 	let start = f.pos();
 	let usize = f.u32()? as usize;
@@ -86,11 +86,11 @@ pub fn decompress_ed7(f: &mut Reader) -> Result<Vec<u8>, Error> {
 	Ok(out)
 }
 
-pub fn decompress_ed6_from_slice(data: &[u8]) -> Result<Vec<u8>, Error> {
+pub fn decompress_ed6_from_slice(data: &[u8]) -> Result<Vec<u8>> {
 	decompress_ed6(&mut Reader::new(data))
 }
 
-pub fn decompress_ed7_from_slice(data: &[u8]) -> Result<Vec<u8>, Error> {
+pub fn decompress_ed7_from_slice(data: &[u8]) -> Result<Vec<u8>> {
 	decompress_ed7(&mut Reader::new(data))
 }
 

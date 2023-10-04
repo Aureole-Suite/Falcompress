@@ -1,20 +1,6 @@
 use gospel::read::{Reader, Le};
 
-#[derive(Debug, thiserror::Error)]
-pub enum Error {
-	#[error(transparent)]
-	Read { #[from] source: gospel::read::Error },
-	#[error("attempted to repeat {count} bytes from offset -{offset}, but only have {len} bytes")]
-	BadRepeat {
-		count: usize,
-		offset: usize,
-		len: usize,
-	},
-	#[error("invalid frame")]
-	Frame,
-}
-
-type Result<A, E=Error> = std::result::Result<A, E>;
+use crate::{Result, Error};
 
 trait Output {
 	fn constant(&mut self, n: usize, b: u8);
