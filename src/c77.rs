@@ -3,10 +3,6 @@ use gospel::read::{Reader, Le as _};
 use crate::util::{OutBuf, count_equal};
 use crate::{Result, Error};
 
-macro_rules! println {
-	($($tt:tt)*) => {}
-}
-
 pub fn decompress(f: &mut Reader, out: &mut Vec<u8>) -> Result<()> {
 	let csize = f.u32()? as usize;
 	let usize = f.u32()? as usize;
@@ -17,47 +13,23 @@ pub fn decompress(f: &mut Reader, out: &mut Vec<u8>) -> Result<()> {
 	Error::check_size(usize, out.len() - start)?;
 	Error::check_end(f)?;
 
-	let mut recomp = Vec::new();
-	compress_inner(&out[start..], &mut recomp);
-	let should_compress = usize > 0x40000 || recomp.len() + 4 < usize;
-	assert_eq!(should_compress, f.data()[..4] != [0;4]);
-	// eprintln!("usize={} datalen={} compress={:?} should={should_compress} re_len={}", usize, f.data().len() - 4, f.data()[..4] != [0;4], recomp.len());
-
-	// println!();
-	// let mut recomp = Vec::new();
-	// compress_inner(&out[start..], &mut recomp);
-	// println!("{} {} {:?}", recomp.len(), usize, f.data()[..4] == [0;4]);
-	// if recomp.len() + 4 >= usize {
-	// 	assert!(f.data()[4..] == out[start..]);
-	// } else {
-	// 	assert!(f.data()[4..] == recomp);
-	// }
-	// println!();
-	// println!("===");
-	// println!();
-
 	Ok(())
 }
 
 fn decompress_inner(f: &mut Reader, mut out: OutBuf) -> Result<()> {
-	let start = out.len();
 	let mode = f.u32()?;
 	if mode == 0 {
-		println!("raw");
 		out.extend(f.slice(f.remaining().len())?);
 	} else {
 		while !f.is_empty() {
 			let x = f.u16()? as usize;
 			let x1 = x & !(!0 << mode);
 			let x2 = x >> mode;
-			let pos = out.len() - start;
 			if x1 == 0 {
-				println!("{pos:4} raw {}", x2);
 				out.extend(f.slice(x2)?);
 			} else {
 				out.decomp_repeat(x1, x2 + 1)?;
 				out.extend(&[f.u8()?]);
-				println!("{pos:4} repeat {} {}", pos-(x2+1), x1);
 			}
 		}
 	}
@@ -69,7 +41,6 @@ pub fn compress_inner(input: &[u8], out: &mut Vec<u8>) {
 	fn encode_raw(last: &mut usize, i: usize, out: &mut Vec<u8>, input: &[u8]) {
 		while *last < i {
 			let size = (i - *last).min(255);
-			println!("{last:4} raw {}", size);
 			out.extend(&[0, size as u8]);
 			out.extend(&input[*last..*last+size]);
 			*last += size;
@@ -93,7 +64,6 @@ pub fn compress_inner(input: &[u8], out: &mut Vec<u8>) {
 		let threshold = if i == last { 2 } else { 4 };
 		if i - last < 252 && len >= threshold {
 			encode_raw(&mut last, i, out, input);
-			println!("{i:4} repeat {start} {len}");
 			out.extend(&[len as u8, (i-start-1) as u8, input[i+len]]);
 			i += len + 1;
 			last = i;
