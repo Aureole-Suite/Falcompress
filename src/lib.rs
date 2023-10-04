@@ -1,5 +1,8 @@
+use gospel::read::Reader;
+
 pub mod bzip;
 pub mod c77;
+pub mod freadp;
 
 pub mod util;
 
@@ -20,6 +23,14 @@ pub enum Error {
 impl Error {
 	fn check_size(expected: usize, actual: usize) -> Result<()> {
 		if expected == actual {
+			Ok(())
+		} else {
+			Err(Error::Frame)
+		}
+	}
+
+	fn check_end(f: &Reader) -> Result<()> {
+		if f.remaining().is_empty() {
 			Ok(())
 		} else {
 			Err(Error::Frame)
