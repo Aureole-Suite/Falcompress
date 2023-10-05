@@ -134,12 +134,14 @@ pub use compress::CompressMode;
 pub use compress::compress as compress_chunk;
 
 pub fn compress_ed6(f: &mut Writer, data: &[u8], mode: CompressMode) {
+	let mut nchunks = data.chunks(0xFFF0).count();
 	for chunk in data.chunks(0xFFF0) {
 		let mut data = Vec::new();
 		compress_chunk(chunk, &mut data, mode);
 		f.u16(data.len() as u16 + 2);
 		f.slice(&data);
-		f.u8((chunk.as_ptr_range().end == data.as_ptr_range().end).into());
+		nchunks -= 1;
+		f.u8(nchunks as u8);
 	}
 }
 
