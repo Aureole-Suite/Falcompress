@@ -151,16 +151,20 @@ pub fn compress_ed7(f: &mut Writer, data: &[u8], mode: CompressMode) {
 	f.delay(move |ctx| Ok(u32::to_le_bytes((ctx.label(end)? - ctx.label(start)?) as u32)));
 	f.label(start);
 	f.u32(data.len() as u32);
-	f.u32(1+data.chunks(0xFFF0).count() as u32);
-	for chunk in data.chunks(0xFFF0) {
+	f.u32(1+data.chunks(0x7FF0).count() as u32);
+	for chunk in data.chunks(0x7FF0) {
 		let mut data = Vec::new();
 		compress_chunk(chunk, &mut data, mode);
 		f.u16(data.len() as u16 + 2);
 		f.slice(&data);
 		f.u8(1);
 	}
-	f.u32(0x06000006);
-	f.slice(&[0,0,0]);
+
+	f.u16(4 + 2);
+	let dummy = *data.chunks(0x7FF0).last().and_then(|a| a.first()).unwrap_or(&0);
+	f.slice(&[0, 6, dummy, 0]);
+	f.u8(0);
+
 	f.label(end);
 }
 
