@@ -136,10 +136,7 @@ pub use compress::compress as compress_chunk;
 pub fn compress_ed6(f: &mut Writer, data: &[u8], mode: CompressMode) {
 	let mut nchunks = data.chunks(0xFFF0).count();
 	for chunk in data.chunks(0xFFF0) {
-		let mut data = Vec::new();
-		compress_chunk(chunk, &mut data, mode);
-		f.u16(data.len() as u16 + 2);
-		f.slice(&data);
+		write_compressed_chunk(f, chunk, mode);
 		nchunks -= 1;
 		f.u8(nchunks as u8);
 	}
@@ -148,24 +145,30 @@ pub fn compress_ed6(f: &mut Writer, data: &[u8], mode: CompressMode) {
 pub fn compress_ed7(f: &mut Writer, data: &[u8], mode: CompressMode) {
 	let start = Label::new();
 	let end = Label::new();
-	f.delay(move |ctx| Ok(u32::to_le_bytes((ctx.label(end)? - ctx.label(start)?) as u32)));
-	f.label(start);
+	f.diff32(start, end);
+	f.place(start);
 	f.u32(data.len() as u32);
 	f.u32(1+data.chunks(0x7FF0).count() as u32);
 	for chunk in data.chunks(0x7FF0) {
-		let mut data = Vec::new();
-		compress_chunk(chunk, &mut data, mode);
-		f.u16(data.len() as u16 + 2);
-		f.slice(&data);
+		write_compressed_chunk(f, chunk, mode);
 		f.u8(1);
 	}
 
-	f.u16(4 + 2);
 	let dummy = *data.chunks(0x7FF0).last().and_then(|a| a.first()).unwrap_or(&0);
-	f.slice(&[0, 6, dummy, 0]);
+	write_compressed_chunk(f, &[dummy], mode);
 	f.u8(0);
 
-	f.label(end);
+	f.place(end);
+}
+
+fn write_compressed_chunk(f: &mut Writer, chunk: &[u8], mode: CompressMode) {
+	let start = f.here();
+	let end = Label::new();
+	f.diff16(start, end);
+	let mut data = Vec::new();
+	compress_chunk(chunk, &mut data, mode);
+	f.slice(&data);
+	f.place(end);
 }
 
 pub fn compress_ed6_to_vec(data: &[u8], mode: CompressMode) -> Vec<u8> {
