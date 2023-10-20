@@ -1,6 +1,6 @@
 use std::iter::zip;
 
-use crate::{Result, Error};
+use crate::{Error, Result};
 
 pub fn count_equal(a: &[u8], b: &[u8], limit: usize) -> usize {
 	let n = limit.min(a.len()).min(b.len());
@@ -18,9 +18,7 @@ pub fn count_equal(a: &[u8], b: &[u8], limit: usize) -> usize {
 	}
 
 	i = n.saturating_sub(N);
-	zip(&a[i..n], &b[i..n])
-		.take_while(|(a, b)| a == b)
-		.count() + i
+	zip(&a[i..n], &b[i..n]).take_while(|(a, b)| a == b).count() + i
 }
 
 pub(crate) struct OutBuf<'a> {
@@ -30,7 +28,10 @@ pub(crate) struct OutBuf<'a> {
 
 impl<'a> From<&'a mut Vec<u8>> for OutBuf<'a> {
 	fn from(vec: &'a mut Vec<u8>) -> Self {
-		OutBuf { start: vec.len(), vec }
+		OutBuf {
+			start: vec.len(),
+			vec,
+		}
 	}
 }
 
@@ -56,11 +57,15 @@ impl OutBuf<'_> {
 	}
 
 	pub(crate) fn decomp_repeat(&mut self, count: usize, offset: usize) -> Result<()> {
-		if !(1..=self.len()-self.start).contains(&offset) {
-			return Err(Error::BadRepeat { count, offset, len: self.len() })
+		if !(1..=self.len() - self.start).contains(&offset) {
+			return Err(Error::BadRepeat {
+				count,
+				offset,
+				len: self.len(),
+			});
 		}
 		for _ in 0..count {
-			self.vec.push(self.vec[self.vec.len()-offset]);
+			self.vec.push(self.vec[self.vec.len() - offset]);
 		}
 		Ok(())
 	}

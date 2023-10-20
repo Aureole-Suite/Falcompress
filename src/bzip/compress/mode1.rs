@@ -12,12 +12,14 @@ pub fn compress(input: &[u8], out: &mut Vec<u8>) {
 	let mut cache = HashMap::<[u8; 7], VecDeque<usize>>::new();
 	let mut w = 0;
 	while input_pos < input.len() {
-		let mut run_len = count_equal(&input[input_pos..], &input[input_pos+1..], (1<<12)+3) + 1;
+		let mut run_len =
+			1 + count_equal(&input[input_pos..], &input[input_pos + 1..], (1 << 12) + 3) + 1;
 		let mut run_pos = input_pos;
-		if let Some(input_slice) = input.get(input_pos..input_pos+7) {
+		if let Some(input_slice) = input.get(input_pos..input_pos + 7) {
 			let input_slice = <[u8; 7]>::try_from(input_slice).unwrap();
 			for rep_pos in cache.entry(input_slice).or_default() {
-				let rep_len = count_equal(&input[input_pos+7..], &input[*rep_pos+7..], usize::MAX) + 7;
+				let rep_len =
+					count_equal(&input[input_pos + 7..], &input[*rep_pos + 7..], usize::MAX) + 7;
 				if rep_len > run_len {
 					(run_len, run_pos) = (rep_len, *rep_pos);
 				}
@@ -39,12 +41,12 @@ pub fn compress(input: &[u8], out: &mut Vec<u8>) {
 		}
 
 		while w < input_pos {
-			if let Some(input_slice) = input.get(w..w+7) {
+			if let Some(input_slice) = input.get(w..w + 7) {
 				let input_slice = input_slice.try_into().unwrap();
 				cache.entry(input_slice).or_default().push_back(w);
 			}
 			if let Some(prev_pos) = w.checked_sub(0x1FFF) {
-				let prev_slice = &input[prev_pos..prev_pos+7];
+				let prev_slice = &input[prev_pos..prev_pos + 7];
 				let prev_slice = prev_slice.try_into().unwrap();
 				cache.entry(prev_slice).or_default().pop_front();
 			}
@@ -68,7 +70,7 @@ fn write_const(out: &mut Vec<u8>, b: u8, len: usize) {
 
 fn write_repeat(out: &mut Vec<u8>, off: usize, mut len: usize) {
 	assert!(len >= 7); // technically supports 4, but not used
-	assert!(off < (1<<13));
+	assert!(off < (1 << 13));
 	out.push(0b1_11_00000 | (off >> 8) as u8);
 	out.push(off as u8);
 	len -= 7;
@@ -79,10 +81,10 @@ fn write_repeat(out: &mut Vec<u8>, off: usize, mut len: usize) {
 }
 
 fn write_head(out: &mut Vec<u8>, mask: u8, bits: usize, len: usize) {
-	assert!(mask & ((1<<(bits+1))-1) == 0);
-	assert!(len < (1<<(8+bits)), "{len} < (1<<{})", 8+bits);
-	if len >= (1<<bits) {
-		out.push(mask | (1<<bits) | (len >> 8) as u8);
+	assert!(mask & ((1 << (bits + 1)) - 1) == 0);
+	assert!(len < (1 << (8 + bits)), "{len} < (1<<{})", 8 + bits);
+	if len >= (1 << bits) {
+		out.push(mask | (1 << bits) | (len >> 8) as u8);
 		out.push(len as u8);
 	} else {
 		out.push(mask | len as u8);

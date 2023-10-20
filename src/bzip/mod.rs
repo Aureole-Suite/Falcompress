@@ -14,14 +14,13 @@
 /// - `it3` files use ed7 framing.
 ///
 /// Mode 2 is sometimes inofficially known as FALCOM2, and ed7 framing as FALCOM3.
+use gospel::read::{Le as _, Reader};
+use gospel::write::{Label, Le as _, Writer};
 
-use gospel::read::{Reader, Le as _};
-use gospel::write::{Writer, Le as _, Label};
-
-mod decompress;
 mod compress;
+mod decompress;
 
-use crate::{Result, Error};
+use crate::{Error, Result};
 
 /// Decompresses a single chunk of compressed data. Both mode 1 and 2 are supported.
 /// There are no notable limitations regarding input or output size.
@@ -33,11 +32,11 @@ pub fn decompress_ed6(f: &mut Reader) -> Result<Vec<u8>> {
 	let mut out = Vec::new();
 	loop {
 		let Some(chunklen) = (f.u16()? as usize).checked_sub(2) else {
-			return Err(Error::Frame)
+			return Err(Error::Frame);
 		};
 		decompress_chunk(f.slice(chunklen)?, &mut out)?;
 		if f.u8()? == 0 {
-			break
+			break;
 		}
 	}
 	Ok(out)
@@ -52,7 +51,7 @@ pub fn decompress_ed7(f: &mut Reader) -> Result<Vec<u8>> {
 	let mut chunk_lengths = Vec::with_capacity(nchunks);
 	for n in 0..nchunks {
 		let Some(chunklen) = (f.u16()? as usize).checked_sub(2) else {
-			return Err(Error::Frame)
+			return Err(Error::Frame);
 		};
 		let start = out.len();
 		decompress_chunk(f.slice(chunklen)?, &mut out)?;
@@ -60,7 +59,7 @@ pub fn decompress_ed7(f: &mut Reader) -> Result<Vec<u8>> {
 
 		// Falcom's tools always have 0/1 here, but some other tool — might even be one of mine — writes other values.
 		if (f.u8()? != 0) != (n != nchunks - 1) {
-			return Err(Error::Frame)
+			return Err(Error::Frame);
 		}
 	}
 
@@ -68,10 +67,10 @@ pub fn decompress_ed7(f: &mut Reader) -> Result<Vec<u8>> {
 	// One notable exception is ao-psp's cti03200, which has *two* such bytes
 	while out.len() > usize {
 		if chunk_lengths.pop() != Some(1) {
-			return Err(Error::Frame)
+			return Err(Error::Frame);
 		}
 		if out.pop().unwrap() != out[out.len() / 0x7FF0 * 0x7FF0] {
-			return Err(Error::Frame)
+			return Err(Error::Frame);
 		}
 	}
 
@@ -96,7 +95,9 @@ pub fn compression_info_ed6(data: &[u8]) -> Option<(usize, Option<CompressMode>)
 	loop {
 		let chunklen = (f.u16().ok()? as usize).checked_sub(2)?;
 		let chunk = f.slice(chunklen).ok()?;
-		if chunk.is_empty() { return None }
+		if chunk.is_empty() {
+			return None;
+		}
 		if chunk[0] == 0 {
 			has_mode2 = true;
 		} else {
@@ -104,12 +105,12 @@ pub fn compression_info_ed6(data: &[u8]) -> Option<(usize, Option<CompressMode>)
 		};
 		if f.u8().ok()? == 0 {
 			if !f.remaining().is_empty() {
-				return None
+				return None;
 			}
 			let mut vec = Vec::new();
 			decompress::decompress(chunk, &mut vec).ok()?;
 			len += vec.len();
-			break
+			break;
 		} else {
 			len += 0xFFF0;
 		}
@@ -124,7 +125,6 @@ pub fn compression_info_ed6(data: &[u8]) -> Option<(usize, Option<CompressMode>)
 	Some((len, mode))
 }
 
-pub use compress::CompressMode;
 /// Compresses a single chunk of compressed data, in the specified mode.
 /// The mode 2 compressor can currently not handle chunks larger than `0xFFFF` bytes,
 /// but mode 1 has no such restrictions.
@@ -132,6 +132,7 @@ pub use compress::CompressMode;
 ///
 /// In most cases you will likely want to use the framed formats instead, [`compress_ed6`] or [`compress_ed7`].
 pub use compress::compress as compress_chunk;
+pub use compress::CompressMode;
 
 pub fn compress_ed6(f: &mut Writer, data: &[u8], mode: CompressMode) {
 	let mut nchunks = data.chunks(0xFFF0).count();
@@ -148,13 +149,17 @@ pub fn compress_ed7(f: &mut Writer, data: &[u8], mode: CompressMode) {
 	f.diff32(start, end);
 	f.place(start);
 	f.u32(data.len() as u32);
-	f.u32(1+data.chunks(0x7FF0).count() as u32);
+	f.u32(1 + data.chunks(0x7FF0).count() as u32);
 	for chunk in data.chunks(0x7FF0) {
 		write_compressed_chunk(f, chunk, mode);
 		f.u8(1);
 	}
 
-	let dummy = *data.chunks(0x7FF0).last().and_then(|a| a.first()).unwrap_or(&0);
+	let dummy = *data
+		.chunks(0x7FF0)
+		.last()
+		.and_then(|a| a.first())
+		.unwrap_or(&0);
 	write_compressed_chunk(f, &[dummy], mode);
 	f.u8(0);
 
@@ -186,7 +191,7 @@ pub fn compress_ed7_to_vec(data: &[u8], mode: CompressMode) -> Vec<u8> {
 #[test]
 #[ignore = "it is slow"]
 fn mode2_should_roundtrip() {
-	use gospel::read::{Reader, Le as _};
+	use gospel::read::{Le as _, Reader};
 
 	let data = std::fs::read("../data/fc.extract2/00/font64._da").unwrap();
 	let mut f = Reader::new(&data);
@@ -215,17 +220,22 @@ fn mode2_should_roundtrip() {
 		assert!(inchunk == outchunk);
 
 		if f.u8().unwrap() == 0 {
-			break
+			break;
 		}
 	}
 	let end = std::time::Instant::now();
 
-	println!("Decompress {}, compress {}, total {}", d1.as_secs_f64(), d2.as_secs_f64(), (end-start).as_secs_f64());
+	println!(
+		"Decompress {}, compress {}, total {}",
+		d1.as_secs_f64(),
+		d2.as_secs_f64(),
+		(end - start).as_secs_f64()
+	);
 }
 
 #[test]
 fn mode1_should_roundtrip() {
-	use gospel::read::{Reader, Le as _};
+	use gospel::read::{Le as _, Reader};
 
 	let data = std::fs::read("../data/3rd.extract2/33/val2._x3").unwrap();
 	let mut f = Reader::new(&data);
@@ -254,10 +264,15 @@ fn mode1_should_roundtrip() {
 		assert!(inchunk == outchunk);
 
 		if f.u8().unwrap() == 0 {
-			break
+			break;
 		}
 	}
 	let end = std::time::Instant::now();
 
-	println!("Decompress {}, compress {}, total {}", d1.as_secs_f64(), d2.as_secs_f64(), (end-start).as_secs_f64());
+	println!(
+		"Decompress {}, compress {}, total {}",
+		d1.as_secs_f64(),
+		d2.as_secs_f64(),
+		(end - start).as_secs_f64()
+	);
 }

@@ -1,7 +1,7 @@
-use gospel::read::{Reader, Le as _};
+use gospel::read::{Le as _, Reader};
 
-use crate::util::{OutBuf, count_equal};
-use crate::{Result, Error};
+use crate::util::{count_equal, OutBuf};
+use crate::{Error, Result};
 
 pub fn decompress(f: &mut Reader, out: &mut Vec<u8>) -> Result<()> {
 	let csize = f.u32()? as usize;
@@ -42,7 +42,7 @@ pub fn compress_inner(input: &[u8], out: &mut Vec<u8>) {
 		while *last < i {
 			let size = (i - *last).min(255);
 			out.extend(&[0, size as u8]);
-			out.extend(&input[*last..*last+size]);
+			out.extend(&input[*last..*last + size]);
 			*last += size;
 		}
 	}
@@ -52,19 +52,19 @@ pub fn compress_inner(input: &[u8], out: &mut Vec<u8>) {
 	while i < input.len() {
 		if i - last == 255 {
 			encode_raw(&mut last, i, out, input);
-			continue
+			continue;
 		}
 
 		let (start, len) = (i.saturating_sub(256)..i)
 			.rev()
-			.map(|j| (j, count_equal(&input[i..input.len()-1], &input[j..], 255)))
+			.map(|j| (j, count_equal(&input[i..input.len() - 1], &input[j..], 255)))
 			.max_by_key(|a| a.1)
 			.unwrap_or((0, 0));
 
 		let threshold = if i == last { 2 } else { 4 };
 		if i - last < 252 && len >= threshold {
 			encode_raw(&mut last, i, out, input);
-			out.extend(&[len as u8, (i-start-1) as u8, input[i+len]]);
+			out.extend(&[len as u8, (i - start - 1) as u8, input[i + len]]);
 			i += len + 1;
 			last = i;
 		} else {

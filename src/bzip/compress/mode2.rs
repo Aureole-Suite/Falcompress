@@ -11,12 +11,14 @@ pub fn compress(input: &[u8], out: &mut Vec<u8>) {
 	let mut b = Bits::new(out);
 	let mut dig = Digraphs::new(input);
 	while input_pos < input.len() {
-		let mut run_len = count_equal(&input[input_pos..], &input[input_pos+1..], 0xFFE) + 1;
-		if run_len < 14 { run_len = 1; }
+		let mut run_len = count_equal(&input[input_pos..], &input[input_pos + 1..], 0xFFE) + 1;
+		if run_len < 14 {
+			run_len = 1;
+		}
 		let mut run_pos = input_pos;
 
 		if run_len < 64 && input_pos + 3 < input.len() {
-			 dig.get(&mut run_len, &mut run_pos);
+			dig.get(&mut run_len, &mut run_pos);
 		}
 
 		assert!(run_len > 0);
@@ -40,16 +42,24 @@ pub fn compress(input: &[u8], out: &mut Vec<u8>) {
 				}
 
 				let m = run_len;
-				if m >= 3 { b.bit(false); }
-				if m >= 4 { b.bit(false); }
-				if m >= 5 { b.bit(false); }
-				if m >= 6 { b.bit(false); }
+				if m >= 3 {
+					b.bit(false);
+				}
+				if m >= 4 {
+					b.bit(false);
+				}
+				if m >= 5 {
+					b.bit(false);
+				}
+				if m >= 6 {
+					b.bit(false);
+				}
 				if b.bit(m < 14) {
 					if m >= 6 {
-						b.bits(3, m-6);
+						b.bits(3, m - 6);
 					}
 				} else {
-					b.bits(8, m-14);
+					b.bits(8, m - 14);
 				}
 			}
 		} else {
@@ -87,7 +97,7 @@ impl Digraphs<'_> {
 
 	fn digraph(&self, pos: usize) -> usize {
 		let b1 = self.input[pos];
-		let b2 = *self.input.get(pos+1).unwrap_or(&0);
+		let b2 = *self.input.get(pos + 1).unwrap_or(&0);
 		u16::from_le_bytes([b1, b2]) as usize
 	}
 
@@ -116,7 +126,7 @@ impl Digraphs<'_> {
 	fn get(&self, rep_len: &mut usize, rep_pos: &mut usize) {
 		let mut pos = self.head[self.digraph(self.pos)] as usize;
 		while pos != 0xFFFF {
-			let len = count_equal(&self.input[self.pos+2..], &self.input[pos+2..], 267)+2;
+			let len = count_equal(&self.input[self.pos + 2..], &self.input[pos + 2..], 267) + 2;
 			if len >= *rep_len {
 				(*rep_len, *rep_pos) = (len, pos);
 			}
@@ -135,7 +145,11 @@ impl<'a> Bits<'a> {
 	fn new(out: &'a mut Vec<u8>) -> Self {
 		let bitpos = out.len();
 		out.extend([0, 0]);
-		Self { out, bit_mask: 0x0080, bitpos }
+		Self {
+			out,
+			bit_mask: 0x0080,
+			bitpos,
+		}
 	}
 
 	fn bit(&mut self, v: bool) -> bool {
@@ -149,19 +163,19 @@ impl<'a> Bits<'a> {
 			if self.bit_mask < 256 {
 				self.out[self.bitpos] |= self.bit_mask as u8;
 			} else {
-				self.out[self.bitpos+1] |= (self.bit_mask>>8) as u8;
+				self.out[self.bitpos + 1] |= (self.bit_mask >> 8) as u8;
 			}
 		}
 		v
 	}
 
 	fn bits(&mut self, n: usize, v: usize) {
-		assert!(v < (1<<n), "{v} < (1<<{n})");
-		for k in (n/8*8..n).rev() {
-			self.bit((v>>k) & 1 != 0);
+		assert!(v < (1 << n), "{v} < (1<<{n})");
+		for k in (n / 8 * 8..n).rev() {
+			self.bit((v >> k) & 1 != 0);
 		}
-		for k in (0..n/8).rev() {
-			self.out.push((v>>(k*8)) as u8);
+		for k in (0..n / 8).rev() {
+			self.out.push((v >> (k * 8)) as u8);
 		}
 	}
 

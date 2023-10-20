@@ -1,7 +1,7 @@
-use gospel::read::{Reader, Le};
+use gospel::read::{Le, Reader};
 
 use crate::util::OutBuf;
-use crate::{Result, Error};
+use crate::{Error, Result};
 
 struct Bits {
 	bits: u16,
@@ -35,24 +35,29 @@ impl Bits {
 
 	fn bits(&mut self, n: usize, f: &mut Reader) -> Result<usize> {
 		let mut x = 0;
-		for _ in 0..n%8 {
+		for _ in 0..n % 8 {
 			x = x << 1 | usize::from(self.bit(f)?);
 		}
-		for _ in 0..n/8 {
+		for _ in 0..n / 8 {
 			x = x << 8 | f.u8()? as usize;
 		}
 		Ok(x)
 	}
 
 	fn read_count(&mut self, f: &mut Reader) -> Result<usize> {
-		Ok(
-			if      self.bit(f)? {  2 }
-			else if self.bit(f)? {  3 }
-			else if self.bit(f)? {  4 }
-			else if self.bit(f)? {  5 }
-			else if self.bit(f)? {  6 + self.bits(3, f)? } //  6..=13
-			else                 { 14 + self.bits(8, f)? } // 14..=269
-		)
+		Ok(if self.bit(f)? {
+			2
+		} else if self.bit(f)? {
+			3
+		} else if self.bit(f)? {
+			4
+		} else if self.bit(f)? {
+			5
+		} else if self.bit(f)? {
+			6 + self.bits(3, f)? //  6..=13
+		} else {
+			14 + self.bits(8, f)? // 14..=269
+		})
 	}
 }
 
@@ -96,7 +101,8 @@ fn decompress_mode1(data: &[u8], mut w: OutBuf) -> Result<(), Error> {
 
 	let mut last_o = 0;
 	while !f.is_empty() {
-		#[bitmatch] match f.u8()? as usize {
+		#[bitmatch]
+		match f.u8()? as usize {
 			"00xnnnnn" => {
 				let n = if x == 1 { n << 8 | f.u8()? as usize } else { n };
 				w.extend(f.slice(n)?);
@@ -111,7 +117,7 @@ fn decompress_mode1(data: &[u8], mut w: OutBuf) -> Result<(), Error> {
 			"1nnooooo" => {
 				last_o = o << 8 | f.u8()? as usize;
 				w.decomp_repeat(4 + n, last_o)?;
-			},
+			}
 		}
 	}
 	Ok(())

@@ -1,6 +1,6 @@
-use gospel::read::{Reader, Le as _};
+use gospel::read::{Le as _, Reader};
 
-use crate::{Result, Error};
+use crate::{Error, Result};
 
 pub fn freadp_multi(f: &mut Reader, len: usize) -> Result<Vec<u8>> {
 	let mut out = Vec::new();
