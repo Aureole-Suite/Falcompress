@@ -41,9 +41,9 @@ dependencies = [
 
 [[package]]
 name = "gospel"
-version = "0.1.1"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95806f9b14571299179599809fbea7820ab7541e1dbb0afa7c08fcaef571db39"
+checksum = "cceecce6f4eed9f1e8390d809f8436ca148f6404aaf3b8e81a18dcbaef8a65a7"
 dependencies = [
  "paste",
  "thiserror",
