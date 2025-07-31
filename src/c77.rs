@@ -20,6 +20,17 @@ fn decompress_inner(data: &[u8], mut out: OutBuf) -> Result<()> {
 	let mode = f.u32()?;
 	if mode == 0 {
 		out.extend(f.remaining());
+	} else if mode == 8 {
+		while !f.is_empty() {
+			let x1 = f.u8()? as usize;
+			let x2 = f.u8()? as usize;
+			if x1 == 0 {
+				out.extend(f.slice(x2)?);
+			} else {
+				out.decomp_repeat(x1, x2 + 1)?;
+				out.extend(&[f.u8()?]);
+			}
+		}
 	} else if mode < 16 {
 		while !f.is_empty() {
 			let x = f.u16()? as usize;
