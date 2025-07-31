@@ -61,7 +61,7 @@ impl Bits {
 	}
 }
 
-fn decompress_mode2(data: &[u8], mut w: OutBuf) -> Result<(), Error> {
+fn decompress_mode2(data: &[u8], mut w: OutBuf) -> Result<usize, Error> {
 	let f = &mut Reader::new(data);
 	let mut b = Bits::new();
 	b.renew_bits(f)?;
@@ -92,11 +92,11 @@ fn decompress_mode2(data: &[u8], mut w: OutBuf) -> Result<(), Error> {
 			}
 		}
 	}
-	Ok(())
+	Ok(f.pos())
 }
 
 #[bitmatch::bitmatch]
-fn decompress_mode1(data: &[u8], mut w: OutBuf) -> Result<(), Error> {
+fn decompress_mode1(data: &[u8], mut w: OutBuf) -> Result<usize, Error> {
 	let f = &mut Reader::new(data);
 
 	let mut last_o = 0;
@@ -120,10 +120,10 @@ fn decompress_mode1(data: &[u8], mut w: OutBuf) -> Result<(), Error> {
 			}
 		}
 	}
-	Ok(())
+	Ok(f.pos())
 }
 
-pub fn decompress(data: &[u8], w: &mut Vec<u8>) -> Result<()> {
+pub fn decompress(data: &[u8], w: &mut Vec<u8>) -> Result<usize> {
 	if data.first() == Some(&0) {
 		decompress_mode2(data, w.into())
 	} else {

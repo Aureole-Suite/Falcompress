@@ -2,23 +2,25 @@ use std::iter::zip;
 
 use crate::{Error, Result};
 
-pub fn count_equal(a: &[u8], b: &[u8], limit: usize) -> usize {
+pub(crate) fn count_equal(a: &[u8], b: &[u8], limit: usize) -> usize {
 	let n = limit.min(a.len()).min(b.len());
 	const N: usize = 8;
 
 	let mut i = 0;
-	for (a, b) in zip(a[..n].chunks_exact(N), b[..n].chunks_exact(N)) {
+	let a = a.as_chunks::<N>();
+	let b = b.as_chunks::<N>();
+	for (a, b) in zip(a.0, b.0) {
 		if a == b {
 			i += N;
 		} else {
-			let a = u64::from_le_bytes(a.try_into().unwrap());
-			let b = u64::from_le_bytes(b.try_into().unwrap());
+			let a = u64::from_le_bytes(*a);
+			let b = u64::from_le_bytes(*b);
 			return i + ((a ^ b).trailing_zeros() / 8) as usize;
 		}
 	}
 
 	i = n.saturating_sub(N);
-	zip(&a[i..n], &b[i..n]).take_while(|(a, b)| a == b).count() + i
+	zip(a.1, b.1).take_while(|(a, b)| a == b).count() + i
 }
 
 pub(crate) struct OutBuf<'a> {

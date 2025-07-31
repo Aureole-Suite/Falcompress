@@ -3,17 +3,14 @@ use gospel::read::{Le as _, Reader};
 use crate::util::{count_equal, OutBuf};
 use crate::{Error, Result};
 
-pub fn decompress(f: &mut Reader, out: &mut Vec<u8>) -> Result<()> {
-	let csize = f.u32()? as usize;
-	let usize = f.u32()? as usize;
-	let f = &mut Reader::new(f.slice(csize)?);
-
-	let start = out.len();
+pub fn decompress(data: &[u8], out: &mut Vec<u8>) -> Result<usize> {
+	let f = &mut Reader::new(data);
+	let expected_in_pos = f.u32()? as usize + f.pos();
+	let expected_out_pos = f.u32()? as usize + out.len();
 	decompress_inner(f, out.into())?;
-	Error::check_size(usize, out.len() - start)?;
-	Error::check_end(f)?;
-
-	Ok(())
+	Error::check_size(expected_in_pos, f.pos())?;
+	Error::check_size(expected_out_pos, out.len())?;
+	Ok(f.pos())
 }
 
 fn decompress_inner(f: &mut Reader, mut out: OutBuf) -> Result<()> {

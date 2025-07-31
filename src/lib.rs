@@ -1,17 +1,16 @@
-use gospel::read::Reader;
-
 pub mod bzip;
 pub mod c77;
-pub mod freadp;
 
-pub mod util;
+pub mod ed6;
+pub mod ed7;
+
+mod util;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-	#[error(transparent)]
+	#[error("failed to read at position {pos}")]
 	Read {
-		#[from]
-		source: gospel::read::Error,
+		pos: usize,
 	},
 	#[error("attempted to repeat {count} bytes from offset -{offset}, but only have {len} bytes")]
 	BadRepeat {
@@ -23,17 +22,15 @@ pub enum Error {
 	Frame,
 }
 
+impl From<gospel::read::Error> for Error {
+	fn from(e: gospel::read::Error) -> Self {
+		Error::Read { pos: e.pos() }
+	}
+}
+
 impl Error {
 	fn check_size(expected: usize, actual: usize) -> Result<()> {
 		if expected == actual {
-			Ok(())
-		} else {
-			Err(Error::Frame)
-		}
-	}
-
-	fn check_end(f: &Reader) -> Result<()> {
-		if f.remaining().is_empty() {
 			Ok(())
 		} else {
 			Err(Error::Frame)
