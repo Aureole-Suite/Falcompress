@@ -85,7 +85,7 @@ struct Digraphs<'a> {
 }
 
 impl Digraphs<'_> {
-	fn new(input: &[u8]) -> Digraphs {
+	fn new(input: &[u8]) -> Digraphs<'_> {
 		Digraphs {
 			input,
 			pos: 0,
