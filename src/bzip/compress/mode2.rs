@@ -24,6 +24,7 @@ pub fn compress(input: &[u8], out: &mut Vec<u8>) {
 		assert!(run_len > 0);
 		if b.bit(run_len > 1) {
 			if run_pos == input_pos {
+				run_len = run_len.min((1<<12)-1+14);
 				b.bit(true);
 				b.bits(13, 1);
 				let n = run_len - 14;
@@ -34,6 +35,7 @@ pub fn compress(input: &[u8], out: &mut Vec<u8>) {
 				}
 				b.byte(input[input_pos]);
 			} else {
+				run_len = run_len.min((1<<8)-1+14);
 				let n = input_pos - run_pos;
 				if b.bit(n >= 256) {
 					b.bits(13, n);
@@ -170,7 +172,7 @@ impl<'a> Bits<'a> {
 	}
 
 	fn bits(&mut self, n: usize, v: usize) {
-		assert!(v < (1 << n), "{v} < (1<<{n})");
+		assert!(v < (1 << n), "{v} < (1 << {n})");
 		for k in (n / 8 * 8..n).rev() {
 			self.bit((v >> k) & 1 != 0);
 		}

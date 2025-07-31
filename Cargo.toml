@@ -1,6 +1,6 @@
 [package]
 name = "falcompress"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "A library for handling some of Falcom's proprietary compression algorithms, with emphasis on producing identical bitstreams to Falcom's own tools"

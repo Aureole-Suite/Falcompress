@@ -75,7 +75,7 @@ pub(crate) fn read_compressed_chunk(f: &mut Reader, out: &mut Vec<u8>) -> Result
 	let start = out.len();
 	let expected_chunk_end = f.pos() + f.u16()? as usize;
 	run(f, |data| bzip::decompress(data, out))?;
-	Error::check_size(expected_chunk_end, f.pos())?;
+	Error::check_size("chunk in_pos", expected_chunk_end, f.pos())?;
 	Ok(out.len() - start)
 }
 

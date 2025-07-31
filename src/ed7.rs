@@ -6,8 +6,10 @@ use crate::ed6::{read_compressed_chunk, run, write_compressed_chunk};
 
 pub fn decompress(data: &[u8], out: &mut Vec<u8>) -> Result<usize> {
 	let f = &mut Reader::new(data);
-	let expected_in_pos = f.u32()? as usize + f.pos();
-	let expected_out_len = f.u32()? as usize + out.len();
+	let in_size = f.u32()? as usize;
+	let expected_in_pos = f.pos() + in_size;
+	let out_size = f.u32()? as usize;
+	let expected_out_len = out.len() + out_size;
 	let nchunks = f.u32()? as usize;
 	for n in 0..nchunks {
 		let chunk_len = read_compressed_chunk(f, out)?;
@@ -18,18 +20,23 @@ pub fn decompress(data: &[u8], out: &mut Vec<u8>) -> Result<usize> {
 				// In ao-psp cti03200, there's two.
 				out.pop();
 			} else {
-				return Err(Error::Frame);
+				return Err(Error::Custom {
+					message: format!("unexpected chunk at end of data: {chunk_len} bytes"),
+				});
 			}
 		}
 
 		// Falcom's tools always have 0/1 here, but some other tool — might even be one of mine — writes other values.
-		if (f.u8()? != 0) != (n != nchunks - 1) {
-			return Err(Error::Frame);
+		let b = f.u8()?;
+		if (b != 0) != (n != nchunks - 1) {
+			return Err(Error::Custom {
+				message: format!("unexpected byte at chunk {}/{}: {}", n, nchunks - 1, b),
+			});
 		}
 	}
 
-	Error::check_size(expected_in_pos, f.pos())?;
-	Error::check_size(expected_out_len, out.len())?;
+	Error::check_size("ed7 in_pos", expected_in_pos, f.pos())?;
+	Error::check_size("ed7 out_pos", expected_out_len, out.len())?;
 	Ok(f.pos())
 }
 
@@ -38,19 +45,19 @@ pub fn freadp(data: &[u8], out: &mut Vec<u8>) -> Result<usize> {
 	if f.check_u32(0x80000001).is_ok() {
 		let n_chunks = f.u32()? as usize;
 		let in_size = f.u32()? as usize;
-		let expected_in_pos = f.u32()? as usize + f.pos();
 		let buf_size = f.u32()? as usize;
-		let expected_out_len = f.u32()? as usize + out.len();
-		let f = &mut Reader::new(f.slice(in_size)?);
+		let out_size = f.u32()? as usize;
+		let expected_in_pos = f.pos() + in_size;
+		let expected_out_len = out.len() + out_size;
 
 		let mut max_chunk_len = 0;
 		for _ in 0..n_chunks {
 			let chunk_len = run(f, |data| c77::decompress(data, out))?;
 			max_chunk_len = max_chunk_len.max(chunk_len);
 		}
-		Error::check_size(buf_size, max_chunk_len)?;
-		Error::check_size(expected_in_pos, f.pos())?;
-		Error::check_size(expected_out_len, out.len())?;
+		Error::check_size("freadp buf_size", buf_size, max_chunk_len)?;
+		Error::check_size("freadp in_pos", expected_in_pos, f.pos())?;
+		Error::check_size("freadp out_pos", expected_out_len, out.len())?;
 	} else {
 		run(f, |data| decompress(data, out))?;
 	}

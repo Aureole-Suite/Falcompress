@@ -5,19 +5,22 @@ use crate::{Error, Result};
 
 pub fn decompress(data: &[u8], out: &mut Vec<u8>) -> Result<usize> {
 	let f = &mut Reader::new(data);
-	let expected_in_pos = f.u32()? as usize + f.pos();
-	let expected_out_pos = f.u32()? as usize + out.len();
-	decompress_inner(f, out.into())?;
-	Error::check_size(expected_in_pos, f.pos())?;
-	Error::check_size(expected_out_pos, out.len())?;
+	let in_size = f.u32()? as usize;
+	let out_size = f.u32()? as usize;
+	let expected_in_pos = f.pos() + in_size;
+	let expected_out_pos = out.len() + out_size;
+	decompress_inner(f.slice(in_size)?, out.into())?;
+	Error::check_size("c77 in_pos", expected_in_pos, f.pos())?;
+	Error::check_size("c77 out_pos", expected_out_pos, out.len())?;
 	Ok(f.pos())
 }
 
-fn decompress_inner(f: &mut Reader, mut out: OutBuf) -> Result<()> {
+fn decompress_inner(data: &[u8], mut out: OutBuf) -> Result<()> {
+	let mut f = Reader::new(data);
 	let mode = f.u32()?;
 	if mode == 0 {
-		out.extend(f.slice(f.remaining().len())?);
-	} else {
+		out.extend(f.remaining());
+	} else if mode < 16 {
 		while !f.is_empty() {
 			let x = f.u16()? as usize;
 			let x1 = x & !(!0 << mode);
@@ -29,6 +32,8 @@ fn decompress_inner(f: &mut Reader, mut out: OutBuf) -> Result<()> {
 				out.extend(&[f.u8()?]);
 			}
 		}
+	} else {
+		return Err(Error::Custom { message: format!("unsupported compression mode: {}", mode) });
 	}
 	Ok(())
 }

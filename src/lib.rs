@@ -18,8 +18,10 @@ pub enum Error {
 		offset: usize,
 		len: usize,
 	},
-	#[error("invalid frame")]
-	Frame,
+	#[error("wrong {what}: expected {expected}, got {actual}")]
+	BadSize { what: &'static str, expected: usize, actual: usize },
+	#[error("{message}")]
+	Custom { message: String },
 }
 
 impl From<gospel::read::Error> for Error {
@@ -29,11 +31,11 @@ impl From<gospel::read::Error> for Error {
 }
 
 impl Error {
-	fn check_size(expected: usize, actual: usize) -> Result<()> {
+	fn check_size(what: &'static str, expected: usize, actual: usize) -> Result<()> {
 		if expected == actual {
 			Ok(())
 		} else {
-			Err(Error::Frame)
+			Err(Error::BadSize { what, expected, actual })
 		}
 	}
 }

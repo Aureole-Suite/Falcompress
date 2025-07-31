@@ -7,8 +7,8 @@ pub(crate) fn count_equal(a: &[u8], b: &[u8], limit: usize) -> usize {
 	const N: usize = 8;
 
 	let mut i = 0;
-	let a = a.as_chunks::<N>();
-	let b = b.as_chunks::<N>();
+	let a = a[..n].as_chunks::<N>();
+	let b = b[..n].as_chunks::<N>();
 	for (a, b) in zip(a.0, b.0) {
 		if a == b {
 			i += N;
@@ -19,8 +19,7 @@ pub(crate) fn count_equal(a: &[u8], b: &[u8], limit: usize) -> usize {
 		}
 	}
 
-	i = n.saturating_sub(N);
-	zip(a.1, b.1).take_while(|(a, b)| a == b).count() + i
+	i + zip(a.1, b.1).take_while(|(a, b)| a == b).count()
 }
 
 pub(crate) struct OutBuf<'a> {
